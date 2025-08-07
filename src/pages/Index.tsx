@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { showSuccess, showError } from "@/utils/toast";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Bookmark, Calendar, Lightbulb } from "lucide-react";
 
 type Habit = {
   id: string;
@@ -12,6 +12,13 @@ type Habit = {
   streak: number;
   lastCompleted: Date | null;
   suggestion?: string;
+};
+
+type DailyInspiration = {
+  date: string;
+  quote: string;
+  affirmation: string;
+  funFact: string;
 };
 
 const motivationalQuotes = [
@@ -47,18 +54,50 @@ const affirmations = [
   "I celebrate every step forward"
 ];
 
+const funFacts = [
+  "On this day in 1997, the first Harry Potter book was published in the US",
+  "The world's largest rubber duck is over 6 stories tall",
+  "Bananas are berries, but strawberries aren't",
+  "The shortest war in history lasted only 38 minutes (Britain vs Zanzibar, 1896)",
+  "A group of flamingos is called a 'flamboyance'",
+  "The inventor of the frisbee was turned into a frisbee after he died",
+  "Scotland has 421 words for 'snow'",
+  "The dot over the letter 'i' is called a tittle"
+];
+
 const Index = () => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newHabit, setNewHabit] = useState("");
-  const [dailyQuote, setDailyQuote] = useState("");
-  const [dailyAffirmation, setDailyAffirmation] = useState("");
+  const [dailyInspiration, setDailyInspiration] = useState<DailyInspiration>({
+    date: "",
+    quote: "",
+    affirmation: "",
+    funFact: ""
+  });
+  const [inspirationHistory, setInspirationHistory] = useState<DailyInspiration[]>([]);
   const [showSuggestion, setShowSuggestion] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    // Set daily quote and affirmation
-    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    setDailyQuote(motivationalQuotes[dayOfYear % motivationalQuotes.length]);
-    setDailyAffirmation(affirmations[dayOfYear % affirmations.length]);
+    const today = new Date();
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+    
+    const newInspiration = {
+      date: today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+      quote: motivationalQuotes[dayOfYear % motivationalQuotes.length],
+      affirmation: affirmations[dayOfYear % affirmations.length],
+      funFact: funFacts[dayOfYear % funFacts.length]
+    };
+
+    setDailyInspiration(newInspiration);
+    
+    // Add to history if not already there for today
+    setInspirationHistory(prev => {
+      if (prev.length === 0 || prev[0].date !== newInspiration.date) {
+        return [newInspiration, ...prev].slice(0, 7); // Keep last 7 days
+      }
+      return prev;
+    });
   }, []);
 
   const addHabit = () => {
@@ -108,19 +147,76 @@ const Index = () => {
     }));
   };
 
-  const getRandomSuggestion = () => {
-    return habitSuggestions[Math.floor(Math.random() * habitSuggestions.length)];
-  };
-
   return (
     <div className="min-h-screen p-8 bg-gray-50">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-4">Habit Streak Tracker</h1>
         
         <div className="mb-6 p-4 bg-white rounded-lg shadow">
-          <p className="text-lg italic mb-2">"{dailyQuote}"</p>
-          <p className="font-medium text-blue-600">Affirmation: {dailyAffirmation}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="w-5 h-5 text-blue-500" />
+            <span className="font-medium">{dailyInspiration.date}</span>
+          </div>
+          <p className="text-lg italic mb-2">"{dailyInspiration.quote}"</p>
+          <p className="font-medium text-blue-600 mb-2">Affirmation: {dailyInspiration.affirmation}</p>
+          <div className="flex items-start gap-2 mt-3 pt-3 border-t border-gray-100">
+            <Lightbulb className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Fun Fact:</span> {dailyInspiration.funFact}
+            </p>
+          </div>
         </div>
+
+        <div className="flex gap-2 mb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowHistory(!showHistory)}
+            className="flex items-center gap-2"
+          >
+            <Bookmark className="w-4 h-4" />
+            {showHistory ? "Hide History" : "Show History"}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowSuggestion(!showSuggestion)}
+            className="flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            {showSuggestion ? "Hide Suggestions" : "Get Suggestions"}
+          </Button>
+        </div>
+
+        {showHistory && (
+          <div className="mb-6 p-4 bg-white rounded-lg shadow">
+            <h3 className="font-bold mb-3 flex items-center gap-2">
+              <Bookmark className="w-4 h-4" />
+              Inspiration History
+            </h3>
+            <div className="space-y-4">
+              {inspirationHistory.map((item, index) => (
+                <div key={index} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                  <p className="text-sm font-medium text-gray-500">{item.date}</p>
+                  <p className="text-sm italic">"{item.quote}"</p>
+                  <p className="text-sm text-blue-600">Affirmation: {item.affirmation}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showSuggestion && (
+          <div className="mb-6 p-4 bg-white rounded-lg shadow">
+            <h3 className="font-bold mb-2 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Habit Suggestions
+            </h3>
+            <ul className="list-disc pl-5 space-y-1">
+              {habitSuggestions.map((suggestion, index) => (
+                <li key={index} className="text-sm">{suggestion}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="flex gap-2 mb-8">
           <Input
@@ -131,26 +227,6 @@ const Index = () => {
           />
           <Button onClick={addHabit}>Add Habit</Button>
         </div>
-
-        <Button 
-          variant="outline" 
-          className="mb-6" 
-          onClick={() => setShowSuggestion(!showSuggestion)}
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          {showSuggestion ? "Hide Suggestions" : "Get Habit Suggestions"}
-        </Button>
-
-        {showSuggestion && (
-          <div className="mb-6 p-4 bg-white rounded-lg shadow">
-            <h3 className="font-bold mb-2">Habit Suggestions:</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              {habitSuggestions.map((suggestion, index) => (
-                <li key={index}>{suggestion}</li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         <div className="space-y-4">
           {habits.map(habit => (
